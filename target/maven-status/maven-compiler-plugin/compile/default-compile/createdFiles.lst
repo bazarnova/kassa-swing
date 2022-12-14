@@ -1,0 +1,6 @@
+com\kassa\entity\Check.class
+com\kassa\entity\Product$Builder.class
+com\kassa\SwingApp$DateLabelFormatter.class
+com\kassa\entity\Product.class
+com\kassa\SwingApp.class
+com\kassa\entity\Check$Builder.class
