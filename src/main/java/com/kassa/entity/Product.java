@@ -9,7 +9,7 @@ public class Product {
     private Integer amount;
     private Integer account;
     private BigDecimal weight;
-    private Long check_id;
+    private Long checkId;
     private String comment;
 
     public Product(Builder builder) {
@@ -18,20 +18,20 @@ public class Product {
         this.amount = builder.amount;
         this.account = builder.account;
         this.weight = builder.weight;
-        this.check_id = builder.check_id;
+        this.checkId = builder.checkId;
         this.comment = builder.comment;
     }
 
     public Product() {
     }
 
-    public Product(Long id, String productName, Integer amount, Integer account, BigDecimal weight, Long check_id, String comment) {
+    public Product(Long id, String productName, Integer amount, Integer account, BigDecimal weight, Long checkId, String comment) {
         this.id = id;
         this.productName = productName;
         this.amount = amount;
         this.account = account;
         this.weight = weight;
-        this.check_id = check_id;
+        this.checkId = checkId;
         this.comment = comment;
     }
 
@@ -75,12 +75,12 @@ public class Product {
         this.weight = weight;
     }
 
-    public Long getCheck_id() {
-        return check_id;
+    public Long getCheckId() {
+        return checkId;
     }
 
-    public void setCheck_id(Long check_id) {
-        this.check_id = check_id;
+    public void setCheckId(Long checkId) {
+        this.checkId = checkId;
     }
 
     public String getComment() {
@@ -97,7 +97,7 @@ public class Product {
         Integer amount;
         Integer account;
         BigDecimal weight;
-        Long check_id;
+        Long checkId;
         String comment;
 
         public Builder setId(Long id) {
@@ -125,8 +125,8 @@ public class Product {
             return this;
         }
 
-        public Builder setCheck_id(Long check_id) {
-            this.check_id = check_id;
+        public Builder setCheckId(Long checkId) {
+            this.checkId = checkId;
             return this;
         }
 
@@ -149,12 +149,12 @@ public class Product {
                 Objects.equals(amount, product.amount) &&
                 Objects.equals(account, product.account) &&
                 Objects.equals(weight, product.weight) &&
-                Objects.equals(check_id, product.check_id) &&
+                Objects.equals(checkId, product.checkId) &&
                 Objects.equals(comment, product.comment);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(productName, amount, account, weight, check_id, comment);
+        return Objects.hash(productName, amount, account, weight, checkId, comment);
     }
 }
