@@ -13,7 +13,7 @@ import java.util.Objects;
 @Component
 public class CheckClient implements ICheckClient{
     @Override
-    public Check addNewCheck(Check check) {
+    public Check addCheck(Check check) {
         RestTemplate restTemplate = new RestTemplate();
         ResponseEntity<Check> response = restTemplate.postForEntity("http://localhost:8080/check", check, Check.class);
         return response.getBody();

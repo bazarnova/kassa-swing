@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface ICheckClient {
 
-    Check addNewCheck(Check check);
+    Check addCheck(Check check);
     List<Check> getAllChecks();
 }

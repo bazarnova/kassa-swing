@@ -1,12 +1,16 @@
 package com.kassa;
 
 import com.kassa.client.CheckClient;
+import com.kassa.client.PhotoClient;
 import com.kassa.client.ProductClient;
 import com.kassa.entity.Check;
+import com.kassa.entity.Photo;
 import com.kassa.entity.Product;
 import com.kassa.service.CheckService;
+import com.kassa.service.PhotoService;
 import com.kassa.service.ProductService;
 import com.kassa.support.DoubleInputTextVerifier;
+import com.kassa.telebot.ImagePanel;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
@@ -18,7 +22,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -37,12 +40,16 @@ public class SwingApp extends JFrame {
     ProductClient productClient = new ProductClient();
     ProductService productService = new ProductService(productClient);
 
+    PhotoClient photoClient = new PhotoClient();
+    PhotoService photoService = new PhotoService(photoClient);
+
     private JPanel mainPanel;
     private JPanel addCheckPanel;
     private JPanel checkAddedSuccessfulPanel;
     private JPanel addProductPanel;
     private JPanel getAllChecksPanel;
     private DefaultTableModel productsModel;
+    private JTable checksTable;
 
     public SwingApp() {
         initUI();
@@ -61,7 +68,7 @@ public class SwingApp extends JFrame {
 
     private void initUI() {
         setTitle("kassa-swing");
-        setSize(800, 300);
+        setSize(1000, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
@@ -74,12 +81,26 @@ public class SwingApp extends JFrame {
         });
         mainPanel.add(addButton);
 
-        JButton getAllChecksButton = new JButton("Смотреть чеки");
+        JButton getAllChecksButton = new JButton("Смотреть/редактировать чеки");
         getAllChecksButton.addActionListener((ActionEvent event) -> {
             mainPanel.setVisible(false);
             getAllChecks();
         });
         mainPanel.add(getAllChecksButton);
+        checkNewPhotosFromTelegram();
+    }
+
+    private void checkNewPhotosFromTelegram() {
+        List<Photo> notProcessedPhotos = photoService.getNotProcessedPhotos();
+        if(!notProcessedPhotos.isEmpty()){
+            int i;
+            i = JOptionPane.showConfirmDialog(getParent(), "Поступили новые чеки, желаете их обработать?", "Телеграм-бот",
+                    JOptionPane.YES_NO_OPTION);
+            if (i == 0) {
+                ImagePanel imagePanel = new ImagePanel();
+                imagePanel.setVisible(true);
+            }
+        }
     }
 
     private void getAllChecks() {
@@ -103,7 +124,7 @@ public class SwingApp extends JFrame {
         buttonPanel.add(saveButton);
 
         JButton cancelButton = new JButton("Отмена");
-        cancelButton.addActionListener(e-> {
+        cancelButton.addActionListener(e -> {
             getAllChecksPanel.setVisible(false);
             mainPanel.setVisible(true);
         });
@@ -112,7 +133,7 @@ public class SwingApp extends JFrame {
         getAllChecksPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         //check table
-        JTable checksTable = createChecksTable();
+        checksTable = createChecksTable();
         checksTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JScrollPane checksPane = new JScrollPane(checksTable);
@@ -131,28 +152,48 @@ public class SwingApp extends JFrame {
         JScrollPane productsPane = new JScrollPane(productsTable);
 
         JPanel verticalButtonPanel = new JPanel();
-        BoxLayout layout = new BoxLayout(verticalButtonPanel,BoxLayout.Y_AXIS);
+        BoxLayout layout = new BoxLayout(verticalButtonPanel, BoxLayout.Y_AXIS);
         verticalButtonPanel.setLayout(layout);
 
         JButton addButton = new JButton("Добавить");
-        addButton.addActionListener( e-> productsModel.addRow(new Object[][]{
-            null, null,null,null,null,null
-        }));
+        addButton.addActionListener(e -> {
+            if (checksTable.getSelectedRow() > -1) {
+                productsModel.addRow(new Object[][]{null, null, null, null, null, null});
+            } else {
+                JOptionPane.showMessageDialog(getParent(),
+                        "Выберите в левом окне чек", "Внимание", JOptionPane.WARNING_MESSAGE);
+            }
+        });
         verticalButtonPanel.add(addButton);
 
         JButton removeButton = new JButton("Удалить");
-        removeButton.addActionListener(e-> {
-            int i;
-                i = JOptionPane.showConfirmDialog(getParent(), "Удалить этот продукт?","Удаление продукта",
+        removeButton.addActionListener(e -> {
+            if (productsTable.getSelectedRow() > -1){
+                int i;
+                i = JOptionPane.showConfirmDialog(getParent(), "Удалить этот продукт?", "Удаление продукта",
                         JOptionPane.YES_NO_OPTION);
-                if(i == 0){
+                if (i == 0) {
                     productsModel.removeRow(productsTable.getSelectedRow());
-            }});
+                }
+            }
+        });
         verticalButtonPanel.add(removeButton);
 
         JButton copyButton = new JButton("Копировать");
-        copyButton.addActionListener(e->{
-            productsModel.addRow(new Object[]{productsTable.getSelectedRow()});
+        copyButton.addActionListener(e -> {
+            int selectedRow = productsTable.getSelectedRow();
+            if(selectedRow>-1){
+                Object name = productsModel.getValueAt(selectedRow, 1);
+                Object sum = productsModel.getValueAt(selectedRow, 2);
+                Object count = productsModel.getValueAt(selectedRow, 3);
+                Object weight = productsModel.getValueAt(selectedRow, 4);
+                Object comment = productsModel.getValueAt(selectedRow, 5);
+                productsModel.addRow(new Object[]{null, name, sum, count, weight, comment});
+            }
+            else {
+                JOptionPane.showMessageDialog(getParent(),
+                        "Выберите в правом окне продукт для копирования", "Внимание", JOptionPane.WARNING_MESSAGE);
+            }
         });
         verticalButtonPanel.add(copyButton);
 
@@ -172,39 +213,54 @@ public class SwingApp extends JFrame {
     }
 
     private void saveChanges() {
+        List<Product> products = new ArrayList<>();
         for (int i = 0; i < productsModel.getRowCount(); i++) {
             Long productId = null;
-            if(!productsModel.getValueAt(i, 0).toString().isEmpty()){
+            if (productsModel.getValueAt(i, 0) != null) {
                 productId = Long.valueOf(productsModel.getValueAt(i, 0).toString());
             }
-            String name = productsModel.getValueAt(i, 1).toString();
+            String name = "";
+            if (productsModel.getValueAt(i, 1) != null) {
+                name = productsModel.getValueAt(i, 1).toString();
+            }
             Integer sum = 0;
-            if(!productsModel.getValueAt(i, 2).toString().isEmpty()){
-                sum = Integer.valueOf(productsModel.getValueAt(i, 2).toString()); //добавить валидацию в общ таблицу
+            if (productsModel.getValueAt(i, 2) != null) {
+                sum = Integer.valueOf(productsModel.getValueAt(i, 2).toString());
             }
             Integer count = 0;
-            if(!productsModel.getValueAt(i, 3).toString().isEmpty()){
+            if (productsModel.getValueAt(i, 3) != null) {
                 count = Integer.valueOf(productsModel.getValueAt(i, 3).toString());
             }
-            Long checkId = productService.getProductById(productId).getCheckId();
+            Long checkId = Long.valueOf(checksTable.getModel().getValueAt(checksTable.getSelectedRow(), 0).toString());
+
             BigDecimal weight = new BigDecimal(0.0);
-            if(!productsModel.getValueAt(i, 4).toString().isEmpty()){
+            if (productsModel.getValueAt(i, 4) != null) {
                 weight = new BigDecimal(productsModel.getValueAt(i, 4).toString());
             }
-            String comment = productsModel.getValueAt(i, 5).toString();
-            Product product = new Product(productId, name, sum, count, weight, checkId, comment);
-            if(productService.deleteProduct(productId)){
-                productService.addNewProduct(product);
+            String comment = "";
+            if (productsModel.getValueAt(i, 5) != null) {
+                comment = productsModel.getValueAt(i, 5).toString();
             }
+            Product product = new Product(productId, name, sum, count, weight, checkId, comment);
+            products.add(product);
+        }
+        for (Product product : products) {
+            if (product.getId() != null) {
+                productService.deleteProduct(product.getId());
+            }
+            product.setId(null);
+        }
+        for (Product product : products) {
+            productService.addNewProduct(product);
         }
     }
 
     private void repaintProductTable(JTable checkTable, String[] columns, JTable productsTable) {
         productsModel.setRowCount(0);
-        Long valueAt = Long.valueOf(checkTable.getModel().getValueAt(checkTable.getSelectedRow(), 0).toString());
+        Long checkId = Long.valueOf(checkTable.getModel().getValueAt(checkTable.getSelectedRow(), 0).toString());
 
         //product table
-        List<Product> allProducts = productService.getAllProductsByCheckId(valueAt);
+        List<Product> allProducts = productService.getAllProductsByCheckId(checkId);
         Object[][] data = new Object[allProducts.size()][columns.length];
         for (int i = 0; i < data.length; i++) {
             Product product = allProducts.get(i);
