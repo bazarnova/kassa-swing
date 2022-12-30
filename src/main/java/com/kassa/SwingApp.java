@@ -10,7 +10,7 @@ import com.kassa.service.CheckService;
 import com.kassa.service.PhotoService;
 import com.kassa.service.ProductService;
 import com.kassa.support.DoubleInputTextVerifier;
-import com.kassa.telebot.ImagePanel;
+import com.kassa.image.ImagePanel;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
@@ -50,8 +50,10 @@ public class SwingApp extends JFrame {
     private JPanel getAllChecksPanel;
     private DefaultTableModel productsModel;
     private JTable checksTable;
+    private List<Photo> notProcessedPhotos;
 
     public SwingApp() {
+        notProcessedPhotos = photoService.getNotProcessedPhotos();
         initUI();
     }
 
@@ -87,17 +89,28 @@ public class SwingApp extends JFrame {
             getAllChecks();
         });
         mainPanel.add(getAllChecksButton);
+
+        if(!notProcessedPhotos.isEmpty()){
+            JButton processChecksButton = new JButton("Обработать чеки");
+            processChecksButton.addActionListener((ActionEvent event) -> {
+                ImagePanel imagePanel = new ImagePanel(notProcessedPhotos);
+                mainPanel.add(imagePanel);
+                mainPanel.setVisible(false);
+                imagePanel.setVisible(true);
+            });
+        }
         checkNewPhotosFromTelegram();
     }
 
     private void checkNewPhotosFromTelegram() {
-        List<Photo> notProcessedPhotos = photoService.getNotProcessedPhotos();
         if(!notProcessedPhotos.isEmpty()){
             int i;
             i = JOptionPane.showConfirmDialog(getParent(), "Поступили новые чеки, желаете их обработать?", "Телеграм-бот",
                     JOptionPane.YES_NO_OPTION);
             if (i == 0) {
-                ImagePanel imagePanel = new ImagePanel();
+                ImagePanel imagePanel = new ImagePanel(notProcessedPhotos);
+                add(imagePanel);
+                mainPanel.setVisible(false);
                 imagePanel.setVisible(true);
             }
         }
