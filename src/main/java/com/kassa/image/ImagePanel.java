@@ -5,7 +5,6 @@ import com.kassa.entity.Photo;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -65,5 +64,5 @@ public class ImagePanel extends JPanel {
 //        } catch (NoninvertibleTransformException ex) {
 //            ex.printStackTrace();
 //        }
-    }
+//    }
 }
